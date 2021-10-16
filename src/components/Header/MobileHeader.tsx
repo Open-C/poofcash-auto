@@ -54,7 +54,6 @@ export const MobileHeader: React.FC = () => {
         <Flex sx={{ width: "fit-content", borderBottom: "1px solid #E0E0E0" }}>
           <HeaderButton page={Page.DEPOSIT}>Deposit</HeaderButton>
           <HeaderButton page={Page.WITHDRAW}>Withdraw</HeaderButton>
-          <HeaderButton page={Page.MINE}>Mine</HeaderButton>
           <HeaderButton page={Page.REDEEM}>Redeem</HeaderButton>
           <HeaderButton page={Page.EXCHANGE}>Swap</HeaderButton>
           <HeaderButton page={Page.COMPLIANCE}>Report</HeaderButton>

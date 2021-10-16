@@ -4,7 +4,7 @@ import { createReducer, createAction } from "@reduxjs/toolkit";
 export enum Page {
   DEPOSIT = "deposit",
   WITHDRAW = "withdraw",
-  MINE = "mine",
+  MINE = "mine-secret",
   REDEEM = "redeem",
   EXCHANGE = "swap",
   COMPLIANCE = "report",

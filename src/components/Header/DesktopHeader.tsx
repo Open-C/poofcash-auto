@@ -49,7 +49,6 @@ export const DesktopHeader: React.FC = () => {
             </Box>
             <HeaderLink page={Page.DEPOSIT}>Deposit</HeaderLink>
             <HeaderLink page={Page.WITHDRAW}>Withdraw</HeaderLink>
-            <HeaderLink page={Page.MINE}>Mine</HeaderLink>
             <HeaderLink page={Page.REDEEM}>Redeem</HeaderLink>
             <HeaderLink page={Page.EXCHANGE}>Swap</HeaderLink>
             <HeaderLink page={Page.COMPLIANCE}>Report</HeaderLink>
