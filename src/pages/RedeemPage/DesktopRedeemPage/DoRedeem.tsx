@@ -1,6 +1,6 @@
 import React from "react";
 import { PickRedeem } from "pages/RedeemPage/MobileRedeemPage/PickRedeem";
-import { Container, Grid, Text, Button } from "theme-ui";
+import { Container, Grid, Text, Button, Input } from "theme-ui";
 import { GrayBox } from "components/GrayBox";
 import { useTranslation } from "react-i18next";
 import { SummaryTable } from "components/SummaryTable";
@@ -163,9 +163,14 @@ export const DoRedeem: React.FC<IProps> = ({
         <Text sx={{ display: "block", mb: 4 }} variant="regularGray">
           {t("redeem.desktop.subtitle")}
         </Text>
+        <Input
+          onChange={(e) => setRecipient(e.target.value)}
+          placeholder="Recipient Address"
+          mb={2}
+        />
         {privateKey ? (
           <Button onClick={doRedeem} disabled={loading}>
-            Redeem
+            Redeem All
           </Button>
         ) : (
           <Button onClick={unlockAccount} disabled={loading}>
