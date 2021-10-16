@@ -1,14 +1,22 @@
 import React from "react";
-import { PickWithdraw } from "pages/WithdrawPage/MobileWithdrawPage/PickWithdraw";
-import { Box, Container, Grid, Text } from "theme-ui";
+import {
+  Box,
+  Container,
+  Grid,
+  Text,
+  Textarea,
+  Input,
+  Button,
+  Spinner,
+} from "theme-ui";
 import { GrayBox } from "components/GrayBox";
 import { useTranslation } from "react-i18next";
-import { SummaryTable } from "components/SummaryTable";
-import { isValidNote, parseNote } from "utils/snarks-functions";
-import { humanFriendlyNumber } from "utils/number";
-import { formatCurrency } from "utils/currency";
 import { RelayerOption } from "hooks/useRelayer";
-import { NoteList, NoteListMode } from "components/DepositList";
+import {
+  NoteList,
+  NoteListMode,
+  DepositListGlobal,
+} from "components/DepositList";
 import { PoofKitGlobal } from "hooks/usePoofKit";
 import { getPoofEvents } from "utils/getPoofEvents";
 import { Note } from "@poofcash/poof-kit";
@@ -31,29 +39,24 @@ interface IProps {
 }
 
 export const DoWithdraw: React.FC<IProps> = ({
-  onWithdrawClick,
   setNote,
-  note,
-  setRecipient,
-  recipient,
-  setTxHash,
   selectedRelayer,
-  setSelectedRelayer,
-  relayerOptions,
-  usingCustomRelayer,
-  setUsingCustomRelayer,
-  customRelayer,
-  setCustomRelayer,
-  relayerFee,
 }) => {
   const { t } = useTranslation();
-  const { currency, amount } = parseNote(note);
   const [loading, setLoading] = React.useState(false);
   const { poofKit, poofKitLoading } = PoofKitGlobal.useContainer();
+  const [address, setAddress] = React.useState<string>();
+  const [notes, setNotes] = React.useState<string>();
+  const [notesLeft, setNotesLeft] = React.useState(0);
+  const { deposits } = DepositListGlobal.useContainer();
 
-  const finalWithdrawAmount = Number(amount) - Number(relayerFee);
+  React.useEffect(() => {
+    if (deposits && deposits?.length > 0) {
+      setNotes(deposits.map((d) => d.note.toNoteString()).join("\n"));
+    }
+  }, [deposits]);
 
-  const handleWithdraw = async () => {
+  const handleWithdraw = async (note: string) => {
     if (!selectedRelayer) {
       alert("Relayer is undefined");
       return;
@@ -63,7 +66,7 @@ export const DoWithdraw: React.FC<IProps> = ({
       alert("Poof kit is still loading");
       return;
     }
-
+    console.log(note);
     setLoading(true);
     try {
       const depositEvents = (await getPoofEvents("Deposit", poofKit))[
@@ -72,15 +75,16 @@ export const DoWithdraw: React.FC<IProps> = ({
       const txHash = await poofKit?.withdrawNote(
         note,
         "0",
-        recipient,
+        address || "",
         selectedRelayer.url,
         depositEvents
       );
       if (txHash) {
-        setTxHash(txHash);
-        onWithdrawClick();
+        //setTxHash(txHash);
+        //onWithdrawClick();
+        console.log(txHash);
       } else {
-        alert(
+        console.error(
           "No response from relayer. Check your account in the explorer or try again"
         );
       }
@@ -89,11 +93,20 @@ export const DoWithdraw: React.FC<IProps> = ({
         console.error(e.response.data.error);
       } else {
         console.debug(e);
-        alert(e.message);
+        console.error(e.message);
       }
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const doWithdraw = async () => {
+    setLoading(true);
+    const notesArray = deposits?.map((d) => d.note.toNoteString()) ?? [];
+    let numNotes = notesArray.length;
+    for (let i = 0; i < notesArray?.length; i++) {
+      setNotesLeft(numNotes--);
+      await handleWithdraw(notesArray[i]);
+    }
+    setLoading(false);
   };
 
   let boxContent = (
@@ -107,61 +120,76 @@ export const DoWithdraw: React.FC<IProps> = ({
       </Text>
     </>
   );
-  if (isValidNote(note)) {
-    boxContent = (
-      <>
-        <SummaryTable
-          lineItems={[
-            {
-              label: "Withdrawal Amount",
-              value: `${humanFriendlyNumber(amount)} ${formatCurrency(
-                currency
-              )}`,
-            },
-            {
-              label: `Relayer Fee - ${selectedRelayer?.relayerFee}%`,
-              value: `- ${humanFriendlyNumber(relayerFee)} ${formatCurrency(
-                currency
-              )}`,
-            },
-            { label: "Protocol Fee", value: `0 ${formatCurrency(currency)}` },
-          ]}
-          totalItem={{
-            label: "Total",
-            value: `${humanFriendlyNumber(
-              finalWithdrawAmount
-            )} ${formatCurrency(currency)}`,
-          }}
-        />
-      </>
-    );
-  }
+  // if (isValidNote(note)) {
+  //   boxContent = (
+  //     <>
+  //       <SummaryTable
+  //         lineItems={[
+  //           {
+  //             label: "Withdrawal Amount",
+  //             value: `${humanFriendlyNumber(amount)} ${formatCurrency(
+  //               currency
+  //             )}`,
+  //           },
+  //           {
+  //             label: `Relayer Fee - ${selectedRelayer?.relayerFee}%`,
+  //             value: `- ${humanFriendlyNumber(relayerFee)} ${formatCurrency(
+  //               currency
+  //             )}`,
+  //           },
+  //           { label: "Protocol Fee", value: `0 ${formatCurrency(currency)}` },
+  //         ]}
+  //         totalItem={{
+  //           label: "Total",
+  //           value: `${humanFriendlyNumber(
+  //             finalWithdrawAmount
+  //           )} ${formatCurrency(currency)}`,
+  //         }}
+  //       />
+  //     </>
+  //   );
+  // }
 
   return (
     <Grid sx={{ gridTemplateColumns: "1.3fr 1fr", gridGap: 6 }}>
-      <Container>
-        <Text sx={{ display: "block" }} variant="title">
-          {t("withdraw.desktop.title")}
-        </Text>
-        <Text sx={{ display: "block", mb: 4 }} variant="regularGray">
-          {t("withdraw.desktop.subtitle")}
-        </Text>
-        <PickWithdraw
-          loading={loading}
-          onWithdrawClick={handleWithdraw}
-          setNote={setNote}
-          note={note}
-          setRecipient={setRecipient}
-          recipient={recipient}
-          selectedRelayer={selectedRelayer}
-          setSelectedRelayer={setSelectedRelayer}
-          relayerOptions={relayerOptions}
-          usingCustomRelayer={usingCustomRelayer}
-          setUsingCustomRelayer={setUsingCustomRelayer}
-          customRelayer={customRelayer}
-          setCustomRelayer={setCustomRelayer}
-        />
-      </Container>
+      {loading ? (
+        <>
+          <Spinner />
+          <Text sx={{ display: "block" }} variant="title">
+            {notesLeft} notes left
+          </Text>
+          <Text sx={{ display: "block", mb: 4 }} variant="regularGray">
+            Withdrawing to address {address}. Refresh the page if this address
+            is incorrect!
+          </Text>
+        </>
+      ) : (
+        <Container>
+          <Text sx={{ display: "block" }} variant="title">
+            {t("withdraw.desktop.title")}
+          </Text>
+          <Text sx={{ display: "block", mb: 4 }} variant="regularGray">
+            {t("withdraw.desktop.subtitle")}
+          </Text>
+          <Input
+            placeholder="Recipient Address"
+            onChange={(e) => setAddress(e.target.value)}
+            value={address}
+            mb={2}
+          />
+          <Textarea
+            mb={2}
+            disabled={loading}
+            name="note"
+            placeholder="Enter magic passwords, separated by a new line"
+            onChange={(e) => setNotes(e.target.value)}
+            value={notes}
+            autoComplete="off"
+            rows={25}
+          />
+          <Button onClick={doWithdraw}>Withdraw All</Button>
+        </Container>
+      )}
       <Container>
         <GrayBox>{boxContent}</GrayBox>
         <Box>

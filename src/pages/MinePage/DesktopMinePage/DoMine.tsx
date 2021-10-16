@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { PickMine } from "pages/MinePage/MobileMinePage/PickMine";
 import {
   Box,
   Container,
