@@ -211,10 +211,12 @@ export const DoMine: React.FC<IProps> = ({
   return (
     <Grid sx={{ gridTemplateColumns: "1.3fr 1fr", gridGap: 6 }}>
       {loading ? (
+        <>
         <Spinner />
         <Text sx={{ display: "block", mb: 4 }} variant="regularGray">
         Notes Left: {left}
       </Text>
+      </>
 
       ) : (
         <Container>
