@@ -1,6 +1,6 @@
 import React from "react";
 import { PickRedeem } from "pages/RedeemPage/MobileRedeemPage/PickRedeem";
-import { Container, Grid, Text } from "theme-ui";
+import { Container, Grid, Text, Button } from "theme-ui";
 import { GrayBox } from "components/GrayBox";
 import { useTranslation } from "react-i18next";
 import { SummaryTable } from "components/SummaryTable";
@@ -49,6 +49,16 @@ export const DoRedeem: React.FC<IProps> = ({
   const [loading, setLoading] = React.useState(false);
   const { actWithPoofAccount } = PoofAccountGlobal.useContainer();
   const { poofKit, poofKitLoading } = PoofKitGlobal.useContainer();
+  const [privateKey, setPrivateKey] = React.useState<string>();
+  const [redeemingAmt, setRedeemingAt] = React.useState(0);
+
+  const unlockAccount = () =>
+    actWithPoofAccount(
+      async (pk) => {
+        setPrivateKey(pk);
+      },
+      () => null
+    );
 
   const handleRedeem = async () => {
     if (!selectedRelayer) {
@@ -61,38 +71,50 @@ export const DoRedeem: React.FC<IProps> = ({
     }
 
     setLoading(true);
-    actWithPoofAccount(
-      async (privateKey) => {
-        try {
-          const accountEvents = await getMinerEvents("NewAccount", poofKit);
-          const txHash = await poofKit?.swap(
-            privateKey,
-            amount,
-            recipient,
-            selectedRelayer.url,
-            accountEvents
-          );
-          if (txHash) {
-            setTxHash(txHash);
-            onRedeemClick();
-          } else {
-            alert(
-              "No response from relayer. Check your account in the explorer or try again"
-            );
-          }
-        } catch (e) {
-          if (e.response) {
-            console.error(e.response.data.error);
-          } else {
-            console.debug(e);
-            alert(e.message);
-          }
-        } finally {
-          setLoading(false);
-        }
-      },
-      () => setLoading(false)
-    );
+    try {
+      const accountEvents = await getMinerEvents("NewAccount", poofKit);
+      const apBalance = await poofKit?.apBalance(
+        privateKey ?? "",
+        accountEvents
+      );
+      const balance = Number(apBalance || 0);
+      // Fee + a 0.001 wiggle
+      const fee = Number(selectedRelayer?.miningServiceFee || 0) + 0.001;
+      const max = Math.floor(balance * (1 - fee / 100));
+      setRedeemingAt(max);
+      const txHash = await poofKit?.swap(
+        privateKey ?? "",
+        max.toString(),
+        recipient,
+        selectedRelayer.url,
+        accountEvents
+      );
+      if (txHash) {
+        console.log(txHash);
+        return max;
+        //onRedeemClick();
+      } else {
+        console.error(
+          "No response from relayer. Check your account in the explorer or try again"
+        );
+      }
+    } catch (e) {
+      if (e.response) {
+        console.error(e.response.data.error);
+      } else {
+        console.debug(e);
+      }
+    }
+    return 1;
+  };
+
+  const doRedeem = async () => {
+    let success = true;
+    setLoading(true);
+    while (success) {
+      success = ((await handleRedeem()) || 1) > 0;
+    }
+    setLoading(false);
   };
 
   let boxContent = (
@@ -141,23 +163,21 @@ export const DoRedeem: React.FC<IProps> = ({
         <Text sx={{ display: "block", mb: 4 }} variant="regularGray">
           {t("redeem.desktop.subtitle")}
         </Text>
-        <PickRedeem
-          loading={loading}
-          onRedeemClick={handleRedeem}
-          setAmount={setAmount}
-          amount={amount}
-          poofAmount={poofAmount}
-          setRecipient={setRecipient}
-          recipient={recipient}
-          selectedRelayer={selectedRelayer}
-          setSelectedRelayer={setSelectedRelayer}
-          relayerOptions={relayerOptions}
-          usingCustomRelayer={usingCustomRelayer}
-          setUsingCustomRelayer={setUsingCustomRelayer}
-          customRelayer={customRelayer}
-          setCustomRelayer={setCustomRelayer}
-          relayerFee={relayerFee}
-        />
+        {privateKey ? (
+          <Button onClick={doRedeem} disabled={loading}>
+            Redeem
+          </Button>
+        ) : (
+          <Button onClick={unlockAccount} disabled={loading}>
+            {" "}
+            Unlock Account{" "}
+          </Button>
+        )}
+        {loading && (
+          <Text sx={{ display: "block", mb: 4 }} variant="regularGray">
+            Redeeming {redeemingAmt} AP!
+          </Text>
+        )}
       </Container>
       <Container>
         <GrayBox>{boxContent}</GrayBox>
